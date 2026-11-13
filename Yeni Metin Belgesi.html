@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sound Wave DJ Deck - Mobile</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #ffffff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    .panel {
+      background-color: rgba(20, 20, 26, 0.95);
+      backdrop-filter: blur(12px);
+      padding: 18px 20px;
+      border-radius: 20px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.85);
+      width: 100%;
+      max-width: 460px;
+      text-align: center;
+      border: 1px solid rgba(255, 85, 0, 0.3);
+      box-sizing: border-box;
+    }
+    h2 { margin: 0 0 10px 0; color: #ff5500; text-shadow: 0 0 12px rgba(255,85,0,0.4); font-size: 18px; }
+    
+    .ekran-kapsayici {
+      background: #08080a;
+      border-radius: 12px;
+      border: 1px solid #333;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+      margin-bottom: 12px;
+      overflow: hidden;
+      padding: 8px 10px;
+    }
+    .ust-bilgi {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: bold;
+      color: #00e5ff;
+      margin-bottom: 6px;
+    }
+    .zaman-rozet {
+      background: #181820;
+      padding: 2px 6px;
+      border-radius: 6px;
+      color: #ff5500;
+      font-family: monospace;
+      font-size: 11px;
+      border: 1px solid #2c2c38;
+    }
+
+    .waveform-kutu {
+      position: relative;
+      width: 100%;
+      height: 75px;
+      cursor: pointer;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #0d0d12;
+    }
+    canvas#waveformCanvas {
+      display: block;
+      width: 100%;
+      height: 75px;
+    }
+    .yukleniyor-yazi {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 11px;
+      color: #888;
+      pointer-events: none;
+    }
+
+    canvas#canliOsiloskop {
+      display: block;
+      width: 100%;
+      height: 25px;
+      margin-top: 6px;
+      border-top: 1px solid #1f1f28;
+    }
+
+    .dosya-secici-kutu {
+      background: #252530;
+      border: 1.5px dashed #ff5500;
+      border-radius: 10px;
+      padding: 8px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .dosya-secici-kutu:hover { background: #323240; }
+    input[type="file"] { display: none; }
+    .dosya-etiket { font-size: 12px; color: #ff7733; font-weight: bold; cursor: pointer; }
+
+    .kontrol-grubu {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .grup-baslik {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #00e5ff;
+      margin-bottom: 6px;
+      text-align: left;
+      font-weight: bold;
+    }
+
+    .eq-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .slider-kutu { text-align: center; }
+    .slider-kutu label { font-size: 11px; color: #ddd; display: block; margin-bottom: 3px; }
+    .deger-etiket { color: #00ff88; font-weight: bold; }
+
+    input[type="range"] { width: 100%; cursor: pointer; accent-color: #00e5ff; height: 20px; }
+    .eq-slider { accent-color: #ff5500; }
+
+    .buton-satiri { display: flex; gap: 8px; }
+    .ana-buton {
+      flex: 2;
+      padding: 12px;
+      font-size: 14px;
+      background: #ff5500;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(255,85,0,0.35);
+      transition: 0.2s;
+    }
+    .ana-buton:active { background: #ff6a1f; transform: scale(0.98); }
+    .ana-buton.aktif { background: #ff2a55; box-shadow: 0 0 15px rgba(255,42,85,0.45); }
+    .ana-buton:disabled { background: #444; color: #888; box-shadow: none; cursor: not-allowed; }
+
+    .sifirla-buton {
+      flex: 1;
+      padding: 12px;
+      font-size: 12px;
+      background: #2a2a35;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .sifirla-buton:active { background: #3a3a48; }
+  </style>
+</head>
+<body>
+
+<div class="panel">
+  <h2>🎛️ Sound Wave DJ Deck</h2>
+  
+  <div class="ekran-kapsayici">
+    <div class="ust-bilgi">
+      <span id="dosyaAdi">Parça Bekleniyor...</span>
+      <span class="zaman-rozet"><span id="suAnZaman">00:00</span> / <span id="toplamZaman">00:00</span></span>
+    </div>
+
+    <div class="waveform-kutu" id="waveformKutu">
+      <canvas id="waveformCanvas" width="420" height="75"></canvas>
+      <div class="yukleniyor-yazi" id="durumYazi">Parça Seçiniz</div>
+    </div>
+
+    <canvas id="canliOsiloskop" width="420" height="25"></canvas>
+  </div>
+
+  <div class="dosya-secici-kutu" onclick="document.getElementById('mp3Yukle').click()">
+    <span class="dosya-etiket">📂 Telefondan Müzik Seç (MP3 / WAV)</span>
+    <input type="file" id="mp3Yukle" accept="audio/*">
+  </div>
+
+  <!-- 3 Bant Ekolayzır -->
+  <div class="kontrol-grubu">
+    <div class="grup-baslik">🎚️ 3-Bant EQ</div>
+    <div class="eq-grid">
+      <div class="slider-kutu">
+        <label>BASS: <span class="deger-etiket" id="bassVal">0</span></label>
+        <input type="range" class="eq-slider" id="bassSlider" min="-15" max="15" value="0">
+      </div>
+      <div class="slider-kutu">
+        <label>MID: <span class="deger-etiket" id="midVal">0</span></label>
+        <input type="range" class="eq-slider" id="midSlider" min="-15" max="15" value="0">
+      </div>
+      <div class="slider-kutu">
+        <label>TİZ: <span class="deger-etiket" id="trebleVal">0</span></label>
+        <input type="range" class="eq-slider" id="trebleSlider" min="-15" max="15" value="0">
+      </div>
+    </div>
+  </div>
+
+  <!-- DJ Filtresi ve Tempo -->
+  <div class="kontrol-grubu">
+    <div class="grup-baslik">🌀 Filtre & Tempo</div>
+    <div class="eq-grid" style="grid-template-columns: 1fr 1fr;">
+      <div class="slider-kutu">
+        <label>Low-Pass: <span class="deger-etiket" id="filterVal">20k</span> Hz</label>
+        <input type="range" id="filterSlider" min="150" max="20000" value="20000">
+      </div>
+      <div class="slider-kutu">
+        <label>Hız: <span class="deger-etiket" id="speedVal">1.00</span>x</label>
+        <input type="range" id="speedSlider" min="0.70" max="1.30" step="0.05" value="1.00">
+      </div>
+    </div>
+  </div>
+
+  <!-- Ana Ses -->
+  <div class="kontrol-grubu" style="margin-bottom: 12px;">
+    <div class="slider-kutu" style="text-align: left;">
+      <label>🔊 Master Ses: %<span class="deger-etiket" id="sesDeger">80</span></label>
+      <input type="range" id="sesSlider" min="0" max="150" value="80">
+    </div>
+  </div>
+
+  <div class="buton-satiri">
+    <button id="baslatBtn" class="ana-buton" onclick="sarkiOynatDurdur()" disabled>Parça Seç</button>
+    <button class="sifirla-buton" onclick="ayarlariSifirla()">Sıfırla</button>
+  </div>
+</div>
+
+<script>
+  let audioCtx = null;
+  let audioElement = null;
+  let sourceNode = null;
+  let bassFilter = null;
+  let midFilter = null;
+  let trebleFilter = null;
+  let djFilter = null;
+  let gainNode = null;
+  let analyser = null;
+  let isPlaying = false;
+
+  let waveformTepeNoktalari = [];
+
+  const fileInput = document.getElementById('mp3Yukle');
+  const baslatBtn = document.getElementById('baslatBtn');
+  const dosyaAdi = document.getElementById('dosyaAdi');
+  const durumYazi = document.getElementById('durumYazi');
+  const suAnZaman = document.getElementById('suAnZaman');
+  const toplamZaman = document.getElementById('toplamZaman');
+
+  const waveCanvas = document.getElementById('waveformCanvas');
+  const waveCtx = waveCanvas.getContext('2d');
+  const liveCanvas = document.getElementById('canliOsiloskop');
+  const liveCtx = liveCanvas.getContext('2d');
+
+  const bassSlider = document.getElementById('bassSlider');
+  const midSlider = document.getElementById('midSlider');
+  const trebleSlider = document.getElementById('trebleSlider');
+  const filterSlider = document.getElementById('filterSlider');
+  const speedSlider = document.getElementById('speedSlider');
+  const sesSlider = document.getElementById('sesSlider');
+
+  function sureyiBicimlendir(saniye) {
+    if (isNaN(saniye)) return "00:00";
+    let dk = Math.floor(saniye / 60);
+    let sn = Math.floor(saniye % 60);
+    return (dk < 10 ? '0' : '') + dk + ':' + (sn < 10 ? '0' : '') + sn;
+  }
+
+  fileInput.addEventListener('change', async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    dosyaAdi.textContent = file.name.length > 22 ? file.name.substring(0, 20) + '...' : file.name;
+    durumYazi.style.display = 'block';
+    durumYazi.textContent = 'Analiz ediliyor...';
+
+    if (audioElement) {
+      audioElement.pause();
+      audioElement = null;
+      isPlaying = false;
+      baslatBtn.classList.remove('aktif');
+    }
+
+    const fileURL = URL.createObjectURL(file);
+    audioElement = new Audio(fileURL);
+    audioElement.loop = true;
+    audioElement.playbackRate = parseFloat(speedSlider.value);
+
+    audioElement.addEventListener('loadedmetadata', function() {
+      toplamZaman.textContent = sureyiBicimlendir(audioElement.duration);
+    });
+
+    audioElement.addEventListener('timeupdate', function() {
+      suAnZaman.textContent = sureyiBicimlendir(audioElement.currentTime);
+    });
+
+    setupAudioContext();
+
+    const arrayBuffer = await file.arrayBuffer();
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    waveformHesapla(audioBuffer);
+
+    durumYazi.style.display = 'none';
+    baslatBtn.disabled = false;
+    baslatBtn.textContent = 'Başlat';
+  });
+
+  function waveformHesapla(audioBuffer) {
+    const rawData = audioBuffer.getChannelData(0);
+    const cubukSayisi = 100;
+    const blokBoyutu = Math.floor(rawData.length / cubukSayisi);
+    const filtreliVeri = [];
+
+    for (let i = 0; i < cubukSayisi; i++) {
+      let blokBaslangic = blokBoyutu * i;
+      let toplam = 0;
+      for (let j = 0; j < blokBoyutu; j++) {
+        toplam += Math.abs(rawData[blokBaslangic + j]);
+      }
+      filtreliVeri.push(toplam / blokBoyutu);
+    }
+
+    const maxDeger = Math.max(...filtreliVeri);
+    waveformTepeNoktalari = filtreliVeri.map(n => Math.max(0.08, n / maxDeger));
+  }
+
+  function waveformCiz() {
+    waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+    if (waveformTepeNoktalari.length === 0) return;
+
+    const cubukSayisi = waveformTepeNoktalari.length;
+    const genislik = waveCanvas.width / cubukSayisi;
+    const bosluk = 1.2;
+    const cubukGenislik = Math.max(1, genislik - bosluk);
+
+    let ilerlemeOrani = 0;
+    if (audioElement && audioElement.duration) {
+      ilerlemeOrani = audioElement.currentTime / audioElement.duration;
+    }
+
+    const aktifCubukSiniri = ilerlemeOrani * cubukSayisi;
+
+    for (let i = 0; i < cubukSayisi; i++) {
+      const x = i * genislik;
+      const yukseklik = waveformTepeNoktalari[i] * (waveCanvas.height * 0.85);
+      const ustYukseklik = yukseklik * 0.68;
+      const altYukseklik = yukseklik * 0.32;
+      const merkezY = waveCanvas.height * 0.65;
+
+      if (i <= aktifCubukSiniri) {
+        waveCtx.fillStyle = '#ff5500';
+      } else {
+        waveCtx.fillStyle = '#4a4a58';
+      }
+
+      waveCtx.fillRect(x, merkezY - ustYukseklik, cubukGenislik, ustYukseklik - 1);
+      waveCtx.globalAlpha = 0.45;
+      waveCtx.fillRect(x, merkezY + 1, cubukGenislik, altYukseklik);
+      waveCtx.globalAlpha = 1.0;
+    }
+  }
+
+  // Hem fare hem dokunmatik ekranlar için zıplama desteği
+  waveCanvas.addEventListener('click', function(e) {
+    sarIslemi(e.clientX, waveCanvas);
+  });
+  waveCanvas.addEventListener('touchend', function(e) {
+    if (e.changedTouches.length > 0) {
+      sarIslemi(e.changedTouches[0].clientX, waveCanvas);
+    }
+  });
+
+  function sarIslemi(clientX, canvasElement) {
+    if (!audioElement || !audioElement.duration) return;
+    const rect = canvasElement.getBoundingClientRect();
+    const tiklananX = clientX - rect.left;
+    const oran = Math.max(0, Math.min(1, tiklananX / rect.width));
+    audioElement.currentTime = oran * audioElement.duration;
+  }
+
+  function setupAudioContext() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (sourceNode) sourceNode.disconnect();
+
+    sourceNode = audioCtx.createMediaElementSource(audioElement);
+
+    bassFilter = audioCtx.createBiquadFilter();
+    bassFilter.type = 'lowshelf';
+    bassFilter.frequency.value = 100;
+    bassFilter.gain.value = bassSlider.value;
+
+    midFilter = audioCtx.createBiquadFilter();
+    midFilter.type = 'peaking';
+    midFilter.frequency.value = 1000;
+    midFilter.Q.value = 1;
+    midFilter.gain.value = midSlider.value;
+
+    trebleFilter = audioCtx.createBiquadFilter();
+    trebleFilter.type = 'highshelf';
+    trebleFilter.frequency.value = 4000;
+    trebleFilter.gain.value = trebleSlider.value;
+
+    djFilter = audioCtx.createBiquadFilter();
+    djFilter.type = 'lowpass';
+    djFilter.frequency.value = filterSlider.value;
+
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = sesSlider.value / 100;
+
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+
+    sourceNode.connect(bassFilter);
+    bassFilter.connect(midFilter);
+    midFilter.connect(trebleFilter);
+    trebleFilter.connect(djFilter);
+    djFilter.connect(gainNode);
+    gainNode.connect(analyser);
+    analyser.connect(audioCtx.destination);
+
+    cizimDongusu();
+  }
+
+  function sarkiOynatDurdur() {
+    if (!audioElement) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    if (!isPlaying) {
+      audioElement.play();
+      isPlaying = true;
+      baslatBtn.textContent = 'Duraklat';
+      baslatBtn.classList.add('aktif');
+    } else {
+      audioElement.pause();
+      isPlaying = false;
+      baslatBtn.textContent = 'Devam Et';
+      baslatBtn.classList.remove('aktif');
+    }
+  }
+
+  bassSlider.oninput = function() {
+    document.getElementById('bassVal').textContent = this.value;
+    if (bassFilter) bassFilter.gain.value = this.value;
+  };
+  midSlider.oninput = function() {
+    document.getElementById('midVal').textContent = this.value;
+    if (midFilter) midFilter.gain.value = this.value;
+  };
+  trebleSlider.oninput = function() {
+    document.getElementById('trebleVal').textContent = this.value;
+    if (trebleFilter) trebleFilter.gain.value = this.value;
+  };
+  filterSlider.oninput = function() {
+    let hz = this.value;
+    document.getElementById('filterVal').textContent = hz >= 1000 ? (hz/1000).toFixed(1) + 'k' : hz;
+    if (djFilter) djFilter.frequency.value = hz;
+  };
+  speedSlider.oninput = function() {
+    document.getElementById('speedVal').textContent = parseFloat(this.value).toFixed(2);
+    if (audioElement) audioElement.playbackRate = parseFloat(this.value);
+  };
+  sesSlider.oninput = function() {
+    document.getElementById('sesDeger').textContent = this.value;
+    if (gainNode) gainNode.gain.value = this.value / 100;
+  };
+
+  function ayarlariSifirla() {
+    bassSlider.value = 0; document.getElementById('bassVal').textContent = '0';
+    midSlider.value = 0; document.getElementById('midVal').textContent = '0';
+    trebleSlider.value = 0; document.getElementById('trebleVal').textContent = '0';
+    filterSlider.value = 20000; document.getElementById('filterVal').textContent = '20k';
+    speedSlider.value = 1.00; document.getElementById('speedVal').textContent = '1.00';
+    sesSlider.value = 80; document.getElementById('sesDeger').textContent = '80';
+
+    if (bassFilter) bassFilter.gain.value = 0;
+    if (midFilter) midFilter.gain.value = 0;
+    if (trebleFilter) trebleFilter.gain.value = 0;
+    if (djFilter) djFilter.frequency.value = 20000;
+    if (audioElement) audioElement.playbackRate = 1.00;
+    if (gainNode) gainNode.gain.value = 0.8;
+  }
+
+  function cizimDongusu() {
+    requestAnimationFrame(cizimDongusu);
+    waveformCiz();
+
+    if (!analyser) return;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    analyser.getByteTimeDomainData(dataArray);
+
+    liveCtx.fillStyle = '#08080a';
+    liveCtx.fillRect(0, 0, liveCanvas.width, liveCanvas.height);
+
+    liveCtx.lineWidth = 1.5;
+    liveCtx.strokeStyle = '#00e5ff';
+    liveCtx.beginPath();
+
+    const sliceWidth = liveCanvas.width * 1.0 / bufferLength;
+    let x = 0;
+    for (let i = 0; i < bufferLength; i++) {
+      const v = dataArray[i] / 128.0;
+      const y = v * liveCanvas.height / 2;
+      if (i === 0) liveCtx.moveTo(x, y);
+      else liveCtx.lineTo(x, y);
+      x += sliceWidth;
+    }
+    liveCtx.lineTo(liveCanvas.width, liveCanvas.height / 2);
+    liveCtx.stroke();
+  }
+</script>
+
+</body>
+</html>
